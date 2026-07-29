@@ -1,0 +1,90 @@
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db, todayStr, getSettings } from '../lib/db'
+import type { Meal } from '../types'
+
+interface DaySummary {
+  date: string
+  kcal: number
+  meals: number
+}
+
+function summarize(meals: Meal[]): DaySummary[] {
+  const byDate = new Map<string, DaySummary>()
+  for (const m of meals) {
+    const d = byDate.get(m.date) ?? { date: m.date, kcal: 0, meals: 0 }
+    d.kcal += m.kcal
+    d.meals += 1
+    byDate.set(m.date, d)
+  }
+  return [...byDate.values()].sort((a, b) => (a.date < b.date ? 1 : -1))
+}
+
+function lastNDates(n: number): string[] {
+  const out: string[] = []
+  const d = new Date()
+  for (let i = n - 1; i >= 0; i--) {
+    const dd = new Date(d)
+    dd.setDate(d.getDate() - i)
+    out.push(todayStr(dd))
+  }
+  return out
+}
+
+function fmtDay(date: string): string {
+  if (date === todayStr()) return 'Today'
+  const d = new Date(date + 'T12:00:00')
+  return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
+export default function History() {
+  const meals = useLiveQuery(() => db.meals.orderBy('date').reverse().toArray(), [])
+  const settings = useLiveQuery(() => getSettings(), [])
+  if (!meals) return <div className="screen" />
+
+  const days = summarize(meals)
+  const byDate = new Map(days.map((d) => [d.date, d]))
+  const week = lastNDates(7)
+  const maxKcal = Math.max(settings?.kcalGoal ?? 2000, ...week.map((d) => byDate.get(d)?.kcal ?? 0))
+
+  return (
+    <div className="screen">
+      <h1 className="screen-title">History</h1>
+      <p className="screen-sub">Last 7 days</p>
+
+      <div className="card">
+        <div className="trend">
+          {week.map((d) => {
+            const kcal = byDate.get(d)?.kcal ?? 0
+            const h = maxKcal > 0 ? (kcal / maxKcal) * 100 : 0
+            return (
+              <div className="bar-wrap" key={d}>
+                <div className="bar" style={{ height: `${h}%`, opacity: kcal ? 0.85 : 0.25 }} />
+                <span className="lbl">{new Date(d + 'T12:00:00').toLocaleDateString([], { weekday: 'narrow' })}</span>
+              </div>
+            )
+          })}
+        </div>
+        {settings?.kcalGoal ? <p className="hint" style={{ marginTop: 8 }}>Goal: {settings.kcalGoal} kcal/day</p> : null}
+      </div>
+
+      {days.length === 0 ? (
+        <div className="empty">
+          <div className="big">📅</div>
+          Your logged days will appear here.
+        </div>
+      ) : (
+        days.map((d) => (
+          <div className="card day-row" key={d.date}>
+            <div>
+              <div className="d">{fmtDay(d.date)}</div>
+              <div className="meals-n">
+                {d.meals} meal{d.meals > 1 ? 's' : ''}
+              </div>
+            </div>
+            <div className="k">{Math.round(d.kcal)} kcal</div>
+          </div>
+        ))
+      )}
+    </div>
+  )
+}
