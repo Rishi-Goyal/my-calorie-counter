@@ -98,6 +98,8 @@
   { "name": "Veg sandwich", "kcal": 230, "p": 7, "c": 30, "f": 9, "serving": 150 },
   { "name": "Hot dog", "kcal": 290, "p": 10, "c": 24, "f": 17, "serving": 100 },
   { "name": "Samosa", "kcal": 308, "p": 5, "c": 32, "f": 18, "serving": 60 },
+  { "name": "Pani puri / golgappa", "kcal": 170, "p": 4, "c": 28, "f": 5, "serving": 150 },
+  { "name": "Paneer sandwich (grilled)", "kcal": 250, "p": 10, "c": 25, "f": 12, "serving": 150 },
   { "name": "Pakora", "kcal": 315, "p": 7, "c": 26, "f": 20, "serving": 80 },
   { "name": "Spring roll", "kcal": 250, "p": 5, "c": 28, "f": 13, "serving": 70 },
   { "name": "Momos, steamed", "kcal": 145, "p": 7, "c": 20, "f": 4, "serving": 150 },
