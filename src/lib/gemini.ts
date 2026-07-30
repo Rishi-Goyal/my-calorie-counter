@@ -22,6 +22,10 @@ Identify each distinct food or drink item that would be eaten. For each item est
 - nutrition PER 100 GRAMS of that food as prepared (cooked values; include absorbed cooking oil, butter, dressings, and sugar in drinks)
 - your confidence 0-1 that the identification AND portion are right
 
+Units: use grams (unit "g") for solid and semi-solid foods. For drinks and other liquids consumed by volume (milk, juice, tea, coffee, lassi, soup you'd drink), set unit to "ml", estimate the volume in ml, and give nutrition per 100 ml.
+
+Indian dals and lentil curries: identify the variety from color and texture — toor/arhar (yellow, mushy), moong (pale yellow, small grains), masoor (orange-brown), chana (deep yellow, grainy, holds shape), urad (off-white or black), dal makhani (dark, creamy), panchmel (mixed), sambar (thin, with vegetables and tamarind). Judge consistency from the photo and set kcalPer100g accordingly: watery/thin 60-80, pourable/medium 95-120, thick/scoopable 125-155, makhani-style with visible butter or cream 150-200. Name the item with variety and consistency, e.g. "Toor dal, thick". Dal counts as semi-solid: use grams, not ml.
+
 Also give totalKcalMin and totalKcalMax: an honest 80% confidence interval for the total calories of everything in the photo.
 
 Be realistic, not conservative: home-cooked and restaurant food usually contains more oil than it appears. If the photo contains no food, return an empty items array and say so in description.`
@@ -36,14 +40,15 @@ const RESPONSE_SCHEMA = {
         type: 'OBJECT',
         properties: {
           name: { type: 'STRING' },
-          grams: { type: 'NUMBER' },
+          grams: { type: 'NUMBER', description: 'amount in g, or in ml when unit is ml' },
+          unit: { type: 'STRING', enum: ['g', 'ml'] },
           kcalPer100g: { type: 'NUMBER' },
           proteinPer100g: { type: 'NUMBER' },
           carbsPer100g: { type: 'NUMBER' },
           fatPer100g: { type: 'NUMBER' },
           confidence: { type: 'NUMBER' },
         },
-        required: ['name', 'grams', 'kcalPer100g', 'proteinPer100g', 'carbsPer100g', 'fatPer100g', 'confidence'],
+        required: ['name', 'grams', 'unit', 'kcalPer100g', 'proteinPer100g', 'carbsPer100g', 'fatPer100g', 'confidence'],
       },
     },
     totalKcalMin: { type: 'NUMBER' },
@@ -111,6 +116,7 @@ export async function analyzePhoto(base64Jpeg: string, apiKey: string, model: st
     .map((it) => ({
       name: String(it.name),
       grams: Math.round(Number(it.grams)),
+      unit: it.unit === 'ml' ? ('ml' as const) : ('g' as const),
       kcalPer100g: Number(it.kcalPer100g) || 0,
       proteinPer100g: Number(it.proteinPer100g) || 0,
       carbsPer100g: Number(it.carbsPer100g) || 0,

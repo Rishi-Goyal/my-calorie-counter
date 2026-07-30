@@ -20,6 +20,7 @@ function ItemRow({
   const kcal = Math.round((item.grams * item.kcalPer100g) / 100)
   const sliderMax = Math.max(Math.ceil((item.grams * 2) / 10) * 10, 300)
   const conf = item.confidence
+  const unit = item.unit ?? 'g'
   return (
     <div className="card confirm-item">
       <div className="head">
@@ -27,7 +28,7 @@ function ItemRow({
         <span className="kcal">{kcal} kcal</span>
       </div>
       <div className="sub">
-        {item.kcalPer100g} kcal / 100 g
+        {item.kcalPer100g} kcal / 100 {unit}
         {conf !== undefined && conf < 0.75 ? ' · low confidence — check portion' : ''}
       </div>
       <div className="grams-row">
@@ -35,7 +36,9 @@ function ItemRow({
           <button type="button" onClick={() => onChange({ ...item, grams: Math.max(5, item.grams - 10) })}>
             −
           </button>
-          <span className="val">{item.grams} g</span>
+          <span className="val">
+            {item.grams} {unit}
+          </span>
           <button type="button" onClick={() => onChange({ ...item, grams: item.grams + 10 })}>
             +
           </button>
@@ -73,9 +76,11 @@ export default function ConfirmMeal({ draft, onSave, onCancel }: Props) {
     kcalMax = Math.round(kcalMax * ratio)
   }
 
+  const editing = draft.editId !== undefined
+
   return (
     <div>
-      <h2 className="sheet-title">Confirm your meal</h2>
+      <h2 className="sheet-title">{editing ? 'Edit meal' : 'Confirm your meal'}</h2>
       {draft.thumbnail && (
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
           <img
@@ -120,7 +125,8 @@ export default function ConfirmMeal({ draft, onSave, onCancel }: Props) {
           >
             <span className="n">{f.name}</span>
             <span className="k">
-              {f.kcal} kcal/100g{f.serving ? ` · ${f.serving} g` : ''}
+              {f.kcal} kcal/100{f.unit ?? 'g'}
+              {f.serving ? ` · ${f.serving} ${f.unit ?? 'g'}` : ''}
             </span>
           </button>
         ))}
@@ -138,10 +144,10 @@ export default function ConfirmMeal({ draft, onSave, onCancel }: Props) {
           Protein {t.protein} g · Carbs {t.carbs} g · Fat {t.fat} g
         </div>
         <button type="button" className="btn" disabled={items.length === 0} onClick={() => onSave(items, kcalMin, kcalMax)}>
-          Save meal
+          {editing ? 'Save changes' : 'Save meal'}
         </button>
         <button type="button" className="btn danger-text" onClick={onCancel}>
-          Discard
+          {editing ? 'Cancel' : 'Discard'}
         </button>
       </div>
     </div>

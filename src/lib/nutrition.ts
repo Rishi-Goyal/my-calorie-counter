@@ -38,6 +38,7 @@ export function foodToItem(f: FoodRef, grams?: number): MealItem {
     proteinPer100g: f.p,
     carbsPer100g: f.c,
     fatPer100g: f.f,
+    unit: f.unit,
   }
 }
 

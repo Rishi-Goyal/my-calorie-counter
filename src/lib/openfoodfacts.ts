@@ -36,6 +36,7 @@ export async function lookupBarcode(code: string): Promise<ProductInfo | null> {
     item: {
       name,
       grams: servingGrams ?? 100,
+      unit: unit === 'ml' ? 'ml' : 'g',
       kcalPer100g: kcal,
       proteinPer100g: Number(n.proteins_100g) || 0,
       carbsPer100g: Number(n.carbohydrates_100g) || 0,

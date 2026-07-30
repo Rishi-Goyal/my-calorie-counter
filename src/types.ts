@@ -1,20 +1,24 @@
+export type Unit = 'g' | 'ml'
+
 export interface FoodRef {
   name: string
-  kcal: number // per 100g
+  kcal: number // per 100g (or 100 ml for liquids)
   p: number // protein per 100g
   c: number // carbs per 100g
   f: number // fat per 100g
-  serving?: number // typical serving in grams
+  serving?: number // typical serving in grams/ml
+  unit?: Unit // absent = grams
 }
 
 export interface MealItem {
   name: string
-  grams: number
+  grams: number // amount in g, or ml when unit is 'ml'
   kcalPer100g: number
   proteinPer100g: number
   carbsPer100g: number
   fatPer100g: number
   confidence?: number // 0..1, from AI analysis
+  unit?: Unit // absent = grams
 }
 
 export type MealSource = 'photo' | 'barcode' | 'manual'
@@ -50,4 +54,5 @@ export interface DraftMeal {
   description?: string
   kcalMin?: number
   kcalMax?: number
+  editId?: number // present = editing this existing meal instead of logging a new one
 }

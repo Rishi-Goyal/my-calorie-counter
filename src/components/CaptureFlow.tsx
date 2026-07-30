@@ -16,8 +16,8 @@ type Stage =
   | { kind: 'search'; picked: MealItem[] }
   | { kind: 'confirm'; draft: DraftMeal }
 
-export default function CaptureFlow({ onClose }: { onClose: () => void }) {
-  const [stage, setStage] = useState<Stage>({ kind: 'menu' })
+export default function CaptureFlow({ onClose, initial }: { onClose: () => void; initial?: DraftMeal }) {
+  const [stage, setStage] = useState<Stage>(initial ? { kind: 'confirm', draft: initial } : { kind: 'menu' })
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -72,20 +72,41 @@ export default function CaptureFlow({ onClose }: { onClose: () => void }) {
 
   async function saveMeal(draft: DraftMeal, items: MealItem[], kcalMin?: number, kcalMax?: number) {
     const t = totals(items)
-    await db.meals.add({
-      date: todayStr(),
-      createdAt: Date.now(),
-      items,
-      kcal: t.kcal,
-      protein: t.protein,
-      carbs: t.carbs,
-      fat: t.fat,
-      kcalMin,
-      kcalMax,
-      source: draft.source,
-      thumbnail: draft.thumbnail,
-      description: draft.description || items.map((i) => i.name).join(', '),
-    })
+    // Manual meals are described by their item list, so refresh it after edits;
+    // photo/barcode meals keep the original description.
+    const description =
+      draft.source === 'manual' || !draft.description
+        ? items.map((i) => i.name).join(', ')
+        : draft.description
+
+    if (draft.editId !== undefined) {
+      // Editing keeps the meal's original date, time, source, and thumbnail
+      await db.meals.update(draft.editId, {
+        items,
+        kcal: t.kcal,
+        protein: t.protein,
+        carbs: t.carbs,
+        fat: t.fat,
+        kcalMin,
+        kcalMax,
+        description,
+      })
+    } else {
+      await db.meals.add({
+        date: todayStr(),
+        createdAt: Date.now(),
+        items,
+        kcal: t.kcal,
+        protein: t.protein,
+        carbs: t.carbs,
+        fat: t.fat,
+        kcalMin,
+        kcalMax,
+        source: draft.source,
+        thumbnail: draft.thumbnail,
+        description,
+      })
+    }
     onClose()
   }
 

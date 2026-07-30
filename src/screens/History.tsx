@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, todayStr, getSettings } from '../lib/db'
 import type { Meal } from '../types'
+import MealCard from '../components/MealCard'
 
 interface DaySummary {
   date: string
@@ -36,9 +38,15 @@ function fmtDay(date: string): string {
   return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
-export default function History() {
+interface Props {
+  onEditMeal: (meal: Meal) => void
+  onCopyMeal: (meal: Meal) => void
+}
+
+export default function History({ onEditMeal, onCopyMeal }: Props) {
   const meals = useLiveQuery(() => db.meals.orderBy('date').reverse().toArray(), [])
   const settings = useLiveQuery(() => getSettings(), [])
+  const [expanded, setExpanded] = useState<string | null>(null)
   if (!meals) return <div className="screen" />
 
   const days = summarize(meals)
@@ -73,17 +81,40 @@ export default function History() {
           Your logged days will appear here.
         </div>
       ) : (
-        days.map((d) => (
-          <div className="card day-row" key={d.date}>
-            <div>
-              <div className="d">{fmtDay(d.date)}</div>
-              <div className="meals-n">
-                {d.meals} meal{d.meals > 1 ? 's' : ''}
+        days.map((d) => {
+          const open = expanded === d.date
+          return (
+            <div key={d.date}>
+              <div
+                className={`card day-row expandable${open ? ' open' : ''}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => setExpanded(open ? null : d.date)}
+                onKeyDown={(e) => e.key === 'Enter' && setExpanded(open ? null : d.date)}
+              >
+                <div>
+                  <div className="d">{fmtDay(d.date)}</div>
+                  <div className="meals-n">
+                    {d.meals} meal{d.meals > 1 ? 's' : ''} · tap to {open ? 'collapse' : 'view'}
+                  </div>
+                </div>
+                <div className="k">
+                  {Math.round(d.kcal)} kcal <span className="chevron">{open ? '▾' : '▸'}</span>
+                </div>
               </div>
+              {open && (
+                <div className="day-meals">
+                  {meals
+                    .filter((m) => m.date === d.date)
+                    .sort((a, b) => b.createdAt - a.createdAt)
+                    .map((m) => (
+                      <MealCard key={m.id} meal={m} onEdit={onEditMeal} onCopy={onCopyMeal} />
+                    ))}
+                </div>
+              )}
             </div>
-            <div className="k">{Math.round(d.kcal)} kcal</div>
-          </div>
-        ))
+          )
+        })
       )}
     </div>
   )
