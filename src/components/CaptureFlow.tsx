@@ -7,6 +7,7 @@ import { lookupBarcode } from '../lib/openfoodfacts'
 import { startBarcodeScanner, type ScannerHandle } from '../lib/barcode'
 import { totals, searchFoods, foodToItem } from '../lib/nutrition'
 import ConfirmMeal from './ConfirmMeal'
+import ActivityForm from './ActivityLog'
 
 type Stage =
   | { kind: 'menu' }
@@ -15,6 +16,7 @@ type Stage =
   | { kind: 'looking-up' }
   | { kind: 'search'; picked: MealItem[] }
   | { kind: 'confirm'; draft: DraftMeal }
+  | { kind: 'activity' }
 
 export default function CaptureFlow({ onClose, initial }: { onClose: () => void; initial?: DraftMeal }) {
   const [stage, setStage] = useState<Stage>(initial ? { kind: 'confirm', draft: initial } : { kind: 'menu' })
@@ -155,8 +157,18 @@ export default function CaptureFlow({ onClose, initial }: { onClose: () => void;
                 <span className="d">Pick from the built-in food database</span>
               </span>
             </button>
+            <button type="button" className="capture-opt" onClick={() => setStage({ kind: 'activity' })}>
+              <span className="ico">🏃</span>
+              <span>
+                <span className="t">Log activity</span>
+                <br />
+                <span className="d">Exercise tops up today's calorie budget</span>
+              </span>
+            </button>
           </>
         )}
+
+        {stage.kind === 'activity' && <ActivityForm onDone={onClose} onBack={() => setStage({ kind: 'menu' })} />}
 
         {stage.kind === 'analyzing' && (
           <div className="analyzing">

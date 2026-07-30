@@ -57,13 +57,17 @@ interface Props {
 export default function Home({ onEditMeal, onCopyMeal }: Props) {
   const today = todayStr()
   const meals = useLiveQuery(() => db.meals.where('date').equals(today).reverse().sortBy('createdAt'), [today])
+  const activities = useLiveQuery(() => db.activities.where('date').equals(today).reverse().sortBy('createdAt'), [today])
   const settings = useLiveQuery(() => getSettings(), [])
 
   const kcalGoal = settings?.kcalGoal ?? 2000
   const proteinGoal = settings?.proteinGoal ?? 100
-  // Derive carb/fat targets from the calorie goal (50% / 30% of energy)
-  const carbsGoal = (kcalGoal * 0.5) / 4
-  const fatGoal = (kcalGoal * 0.3) / 9
+  // Prefer stored macro goals (auto mode); fall back to derived splits
+  const carbsGoal = settings?.carbsGoal ?? (kcalGoal * 0.5) / 4
+  const fatGoal = settings?.fatGoal ?? (kcalGoal * 0.3) / 9
+
+  const exerciseKcal = (activities ?? []).reduce((s, a) => s + a.kcal, 0)
+  const effectiveGoal = kcalGoal + exerciseKcal
 
   const t = (meals ?? []).reduce(
     (acc, m) => ({
@@ -83,13 +87,45 @@ export default function Home({ onEditMeal, onCopyMeal }: Props) {
       </p>
 
       <div className="card today-hero">
-        <KcalRing kcal={t.kcal} goal={kcalGoal} />
+        <KcalRing kcal={t.kcal} goal={effectiveGoal} />
         <div className="macros">
           <MacroBar name="Protein" value={t.protein} goal={proteinGoal} color="var(--protein)" />
           <MacroBar name="Carbs" value={t.carbs} goal={carbsGoal} color="var(--carbs)" />
           <MacroBar name="Fat" value={t.fat} goal={fatGoal} color="var(--fat)" />
         </div>
       </div>
+      {exerciseKcal > 0 && (
+        <p className="hint" style={{ margin: '-6px 4px 12px' }}>
+          🏃 Exercise earned <b>+{exerciseKcal} kcal</b> today ({kcalGoal} base + {exerciseKcal})
+        </p>
+      )}
+
+      {(activities ?? []).map((a) => (
+        <div className="card meal-card" key={`a${a.id}`}>
+          <div className="meal-thumb">🏃</div>
+          <div className="meal-info">
+            <div className="meal-name">{a.label}</div>
+            <div className="meal-meta">
+              {a.minutes} min · {a.source === 'simple-workout' ? 'Simple Workout' : 'logged manually'}
+            </div>
+          </div>
+          <div className="meal-kcal" style={{ color: 'var(--accent)' }}>
+            +{a.kcal}
+          </div>
+          <div className="meal-actions">
+            <button
+              type="button"
+              className="icon-btn danger"
+              aria-label="Delete activity"
+              onClick={() => {
+                if (confirm('Delete this activity?')) db.activities.delete(a.id!)
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      ))}
 
       {meals === undefined ? null : meals.length === 0 ? (
         <div className="empty">

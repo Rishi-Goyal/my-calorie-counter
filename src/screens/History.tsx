@@ -45,11 +45,23 @@ interface Props {
 
 export default function History({ onEditMeal, onCopyMeal }: Props) {
   const meals = useLiveQuery(() => db.meals.orderBy('date').reverse().toArray(), [])
+  const allActivities = useLiveQuery(() => db.activities.toArray(), [])
   const settings = useLiveQuery(() => getSettings(), [])
   const [expanded, setExpanded] = useState<string | null>(null)
   if (!meals) return <div className="screen" />
 
-  const days = summarize(meals)
+  const exerciseByDate = new Map<string, number>()
+  for (const a of allActivities ?? []) {
+    exerciseByDate.set(a.date, (exerciseByDate.get(a.date) ?? 0) + a.kcal)
+  }
+
+  // Days with only workouts (no meals) still deserve a row
+  const mealDates = new Set(meals.map((m) => m.date))
+  const exerciseOnlyDays = [...exerciseByDate.keys()]
+    .filter((d) => !mealDates.has(d))
+    .map((date) => ({ date, kcal: 0, meals: 0 }))
+
+  const days = [...summarize(meals), ...exerciseOnlyDays].sort((a, b) => (a.date < b.date ? 1 : -1))
   const byDate = new Map(days.map((d) => [d.date, d]))
   const week = lastNDates(7)
   const maxKcal = Math.max(settings?.kcalGoal ?? 2000, ...week.map((d) => byDate.get(d)?.kcal ?? 0))
@@ -95,11 +107,17 @@ export default function History({ onEditMeal, onCopyMeal }: Props) {
                 <div>
                   <div className="d">{fmtDay(d.date)}</div>
                   <div className="meals-n">
-                    {d.meals} meal{d.meals > 1 ? 's' : ''} · tap to {open ? 'collapse' : 'view'}
+                    {d.meals === 0
+                      ? 'workout only'
+                      : `${d.meals} meal${d.meals > 1 ? 's' : ''} · tap to ${open ? 'collapse' : 'view'}`}
                   </div>
                 </div>
                 <div className="k">
-                  {Math.round(d.kcal)} kcal <span className="chevron">{open ? '▾' : '▸'}</span>
+                  {Math.round(d.kcal)} kcal
+                  {exerciseByDate.get(d.date) ? (
+                    <span className="exercise-chip"> +{exerciseByDate.get(d.date)}🏃</span>
+                  ) : null}{' '}
+                  <span className="chevron">{open ? '▾' : '▸'}</span>
                 </div>
               </div>
               {open && (

@@ -39,12 +39,42 @@ export interface Meal {
   description?: string
 }
 
+export type Sex = 'male' | 'female'
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active'
+
+export interface Profile {
+  sex: Sex
+  age: number
+  heightCm: number
+  weightKg: number
+  targetWeightKg: number
+  weeklyRateKg: number // desired change pace, kg per week (0 = maintain)
+  activityLevel: ActivityLevel
+}
+
 export interface Settings {
   id: number // always 1
   geminiKey?: string
   model?: string
+  // Active goals. In 'auto' mode these are recomputed from profile; in 'manual' they are user-set.
   kcalGoal?: number
   proteinGoal?: number
+  carbsGoal?: number
+  fatGoal?: number
+  profile?: Profile
+  goalsMode?: 'auto' | 'manual'
+}
+
+export interface Activity {
+  id?: number
+  date: string // YYYY-MM-DD local
+  createdAt: number
+  type: string // key from ACTIVITY_TYPES, or free text
+  label: string
+  minutes: number
+  kcal: number
+  source: 'manual' | 'simple-workout'
+  externalId?: string // dedupe key for bridge imports
 }
 
 export interface DraftMeal {

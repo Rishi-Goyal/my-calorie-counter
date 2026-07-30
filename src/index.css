@@ -392,3 +392,38 @@ label.field > span { display: block; margin-bottom: 6px; }
 
 .hint { font-size: 12.5px; color: var(--text-dim); }
 .row-sb { display: flex; justify-content: space-between; align-items: center; }
+
+/* ---- Segmented control ---- */
+.seg { display: flex; gap: 6px; }
+.seg button {
+  flex: 1;
+  padding: 9px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.seg button.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 650;
+}
+.seg.small button { padding: 5px 10px; font-size: 12px; flex: none; }
+
+/* ---- Goals explanation ---- */
+.explain { font-size: 13.5px; line-height: 1.5; }
+.explain-row { margin-bottom: 8px; }
+.explain hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+.explain .warn { color: var(--carbs); font-weight: 600; }
+.linkish {
+  background: none; border: none;
+  color: var(--accent);
+  font-size: 12.5px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.capture-opt.selected { border-color: var(--accent); background: var(--accent-soft); }
+.exercise-chip { color: var(--accent); font-size: 12px; font-weight: 600; }
