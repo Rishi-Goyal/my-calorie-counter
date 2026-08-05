@@ -1,7 +1,21 @@
 import type { FoodRef, MealItem } from '../types'
 import foodsRaw from '../data/foods.json'
+import { db } from './db'
 
 export const FOODS = foodsRaw as FoodRef[]
+
+// AI-looked-up foods saved on this device, cached for synchronous search.
+let customFoods: FoodRef[] = []
+
+export async function refreshCustomFoods(): Promise<void> {
+  customFoods = (await db.customFoods.toArray()).map((c) => ({ ...c, custom: true }))
+}
+refreshCustomFoods()
+
+export async function addCustomFood(f: FoodRef): Promise<void> {
+  await db.customFoods.add({ ...f, custom: undefined, createdAt: Date.now() })
+  await refreshCustomFoods()
+}
 
 export interface Totals {
   kcal: number
@@ -47,7 +61,7 @@ export function searchFoods(query: string, limit = 12): FoodRef[] {
   if (!q) return []
   const words = q.split(/\s+/)
   const scored: { f: FoodRef; score: number }[] = []
-  for (const f of FOODS) {
+  for (const f of [...FOODS, ...customFoods]) {
     const name = f.name.toLowerCase()
     let score = 0
     if (name.startsWith(q)) score = 3

@@ -5,9 +5,10 @@ import { processPhoto } from '../lib/image'
 import { analyzePhoto, GeminiError } from '../lib/gemini'
 import { lookupBarcode } from '../lib/openfoodfacts'
 import { startBarcodeScanner, type ScannerHandle } from '../lib/barcode'
-import { totals, searchFoods, foodToItem } from '../lib/nutrition'
+import { totals, searchFoods, foodToItem, itemKcal } from '../lib/nutrition'
 import ConfirmMeal from './ConfirmMeal'
 import ActivityForm from './ActivityLog'
+import AiFoodLookup from './AiFoodLookup'
 
 type Stage =
   | { kind: 'menu' }
@@ -290,18 +291,47 @@ function ManualSearch({
             setQuery('')
           }}
         >
-          <span className="n">{f.name}</span>
+          <span className="n">
+            {f.name}
+            {f.custom ? ' 🔮' : ''}
+          </span>
           <span className="k">
-            {f.kcal} kcal/100g{f.serving ? ` · ~${f.serving} g serving` : ''}
+            {f.kcal} kcal/100{f.unit ?? 'g'}
+            {f.serving ? ` · ~${f.serving} ${f.unit ?? 'g'} serving` : ''}
           </span>
         </button>
       ))}
+      {query.trim().length >= 3 && results.length === 0 && (
+        <AiFoodLookup
+          query={query}
+          onFound={(f) => {
+            onChange([...picked, foodToItem(f)])
+            setQuery('')
+          }}
+        />
+      )}
       {picked.length > 0 && (
         <>
-          <p className="hint" style={{ margin: '8px 0' }}>
-            Added: {picked.map((p) => p.name).join(', ')}
+          <p className="hint" style={{ margin: '12px 0 6px' }}>
+            Selected — portions adjustable on the next screen
           </p>
-          <button type="button" className="btn" onClick={onContinue}>
+          {picked.map((it, i) => (
+            <div className="search-result picked-row" key={`${it.name}-${i}`}>
+              <span className="n">{it.name}</span>
+              <span className="k">
+                {it.grams} {it.unit ?? 'g'} · {Math.round(itemKcal(it))} kcal
+              </span>
+              <button
+                type="button"
+                className="icon-btn danger"
+                aria-label={`Remove ${it.name}`}
+                onClick={() => onChange(picked.filter((_, j) => j !== i))}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button type="button" className="btn" onClick={onContinue} style={{ marginTop: 8 }}>
             Continue ({picked.length} item{picked.length > 1 ? 's' : ''})
           </button>
         </>

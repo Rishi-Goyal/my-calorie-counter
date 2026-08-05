@@ -8,6 +8,12 @@ export interface FoodRef {
   f: number // fat per 100g
   serving?: number // typical serving in grams/ml
   unit?: Unit // absent = grams
+  custom?: boolean // true for AI-looked-up foods saved on this device
+}
+
+export interface CustomFood extends FoodRef {
+  id?: number
+  createdAt: number
 }
 
 export interface MealItem {

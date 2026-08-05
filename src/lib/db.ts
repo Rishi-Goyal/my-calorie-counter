@@ -1,10 +1,11 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { Activity, Meal, Settings } from '../types'
+import type { Activity, CustomFood, Meal, Settings } from '../types'
 
 export const db = new Dexie('calorie-counter') as Dexie & {
   meals: EntityTable<Meal, 'id'>
   settings: EntityTable<Settings, 'id'>
   activities: EntityTable<Activity, 'id'>
+  customFoods: EntityTable<CustomFood, 'id'>
 }
 
 db.version(1).stores({
@@ -17,6 +18,14 @@ db.version(2).stores({
   meals: '++id, date, createdAt',
   settings: 'id',
   activities: '++id, date, createdAt, externalId',
+})
+
+// v3: customFoods (AI-looked-up foods saved for offline search). Additive only.
+db.version(3).stores({
+  meals: '++id, date, createdAt',
+  settings: 'id',
+  activities: '++id, date, createdAt, externalId',
+  customFoods: '++id, name, createdAt',
 })
 
 export function todayStr(d = new Date()): string {

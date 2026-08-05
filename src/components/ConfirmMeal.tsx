@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { DraftMeal, MealItem } from '../types'
 import { totals, searchFoods, foodToItem } from '../lib/nutrition'
+import AiFoodLookup from './AiFoodLookup'
 
 interface Props {
   draft: DraftMeal
@@ -18,7 +19,12 @@ function ItemRow({
   onRemove: () => void
 }) {
   const kcal = Math.round((item.grams * item.kcalPer100g) / 100)
-  const sliderMax = Math.max(Math.ceil((item.grams * 2) / 10) * 10, 300)
+  // Slider fine-tunes around the original estimate (0.5×–1.5×); big changes go
+  // through the typed input. Range is fixed at mount so it doesn't shift mid-drag.
+  const initial = useRef(item.grams).current
+  const sliderMin = Math.max(5, Math.floor((initial * 0.5) / 5) * 5)
+  const sliderMax = Math.max(sliderMin + 50, Math.ceil((initial * 1.5) / 5) * 5)
+  const step = item.grams < 100 ? 5 : 10
   const conf = item.confidence
   const unit = item.unit ?? 'g'
   return (
@@ -33,22 +39,33 @@ function ItemRow({
       </div>
       <div className="grams-row">
         <div className="stepper">
-          <button type="button" onClick={() => onChange({ ...item, grams: Math.max(5, item.grams - 10) })}>
+          <button type="button" onClick={() => onChange({ ...item, grams: Math.max(5, item.grams - step) })}>
             −
           </button>
-          <span className="val">
-            {item.grams} {unit}
-          </span>
-          <button type="button" onClick={() => onChange({ ...item, grams: item.grams + 10 })}>
+          <input
+            className="grams-input"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={5000}
+            value={item.grams || ''}
+            onChange={(e) =>
+              onChange({ ...item, grams: Math.max(0, Math.min(5000, Math.round(Number(e.target.value) || 0))) })
+            }
+            onBlur={() => item.grams < 5 && onChange({ ...item, grams: 5 })}
+            aria-label={`Amount in ${unit}`}
+          />
+          <span className="unit-lbl">{unit}</span>
+          <button type="button" onClick={() => onChange({ ...item, grams: item.grams + step })}>
             +
           </button>
         </div>
         <input
           type="range"
-          min={5}
+          min={sliderMin}
           max={sliderMax}
           step={5}
-          value={item.grams}
+          value={Math.max(sliderMin, Math.min(sliderMax, item.grams))}
           onChange={(e) => onChange({ ...item, grams: Number(e.target.value) })}
         />
       </div>
@@ -123,13 +140,27 @@ export default function ConfirmMeal({ draft, onSave, onCancel }: Props) {
               setQuery('')
             }}
           >
-            <span className="n">{f.name}</span>
+            <span className="n">
+              {f.name}
+              {f.custom ? ' 🔮' : ''}
+            </span>
             <span className="k">
               {f.kcal} kcal/100{f.unit ?? 'g'}
               {f.serving ? ` · ${f.serving} ${f.unit ?? 'g'}` : ''}
             </span>
           </button>
         ))}
+        {query.trim().length >= 3 && results.length === 0 && (
+          <div style={{ marginTop: 8 }}>
+            <AiFoodLookup
+              query={query}
+              onFound={(f) => {
+                setItems([...items, foodToItem(f)])
+                setQuery('')
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <div className="total-bar">

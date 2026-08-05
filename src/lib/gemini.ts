@@ -1,4 +1,4 @@
-import type { MealItem } from '../types'
+import type { FoodRef, MealItem } from '../types'
 
 export interface AnalysisResult {
   items: MealItem[]
@@ -57,7 +57,7 @@ const RESPONSE_SCHEMA = {
   required: ['description', 'items', 'totalKcalMin', 'totalKcalMax'],
 }
 
-export async function analyzePhoto(base64Jpeg: string, apiKey: string, model: string): Promise<AnalysisResult> {
+async function callGemini(parts: unknown[], schema: object, apiKey: string, model: string): Promise<unknown> {
   if (!apiKey) throw new GeminiError('no-key', 'No API key set. Add your free Gemini key in Settings.')
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`
@@ -70,17 +70,10 @@ export async function analyzePhoto(base64Jpeg: string, apiKey: string, model: st
         'x-goog-api-key': apiKey,
       },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { inline_data: { mime_type: 'image/jpeg', data: base64Jpeg } },
-              { text: PROMPT },
-            ],
-          },
-        ],
+        contents: [{ parts }],
         generationConfig: {
           responseMimeType: 'application/json',
-          responseSchema: RESPONSE_SCHEMA,
+          responseSchema: schema,
           temperature: 0.2,
         },
       }),
@@ -97,18 +90,25 @@ export async function analyzePhoto(base64Jpeg: string, apiKey: string, model: st
 
   const data = await res.json()
   const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) throw new GeminiError('parse', 'The model returned an empty response. Try another photo.')
+  if (!text) throw new GeminiError('parse', 'The model returned an empty response. Try again.')
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new GeminiError('parse', 'Could not parse the response. Try again.')
+  }
+}
 
-  let parsed: {
+export async function analyzePhoto(base64Jpeg: string, apiKey: string, model: string): Promise<AnalysisResult> {
+  const parsed = (await callGemini(
+    [{ inline_data: { mime_type: 'image/jpeg', data: base64Jpeg } }, { text: PROMPT }],
+    RESPONSE_SCHEMA,
+    apiKey,
+    model,
+  )) as {
     description?: string
     items?: Array<Partial<MealItem>>
     totalKcalMin?: number
     totalKcalMax?: number
-  }
-  try {
-    parsed = JSON.parse(text)
-  } catch {
-    throw new GeminiError('parse', 'Could not parse the analysis. Try again.')
   }
 
   const items: MealItem[] = (parsed.items ?? [])
@@ -129,5 +129,51 @@ export async function analyzePhoto(base64Jpeg: string, apiKey: string, model: st
     description: parsed.description ?? '',
     kcalMin: Math.round(Number(parsed.totalKcalMin) || 0),
     kcalMax: Math.round(Number(parsed.totalKcalMax) || 0),
+  }
+}
+
+const FOOD_LOOKUP_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    name: { type: 'STRING', description: 'canonical dish/food name, capitalized' },
+    kcalPer100: { type: 'NUMBER' },
+    proteinPer100: { type: 'NUMBER' },
+    carbsPer100: { type: 'NUMBER' },
+    fatPer100: { type: 'NUMBER' },
+    typicalServing: { type: 'NUMBER', description: 'one normal serving, in g or ml' },
+    unit: { type: 'STRING', enum: ['g', 'ml'] },
+  },
+  required: ['name', 'kcalPer100', 'proteinPer100', 'carbsPer100', 'fatPer100', 'typicalServing', 'unit'],
+}
+
+/** Text-only lookup for a food missing from the local database. */
+export async function lookupFoodByName(query: string, apiKey: string, model: string): Promise<FoodRef> {
+  const prompt = `Give typical nutrition values for this food: "${query}".
+
+Per 100 g as prepared and eaten (per 100 ml with unit "ml" if it is a drink). Where the preparation is ambiguous, assume a typical Indian or Singaporean home kitchen, including absorbed cooking oil/ghee. typicalServing is the g/ml of one normal portion. Use the food's proper name (e.g. "Sabudana vada" for "sabudana wada").`
+
+  const parsed = (await callGemini([{ text: prompt }], FOOD_LOOKUP_SCHEMA, apiKey, model)) as {
+    name?: string
+    kcalPer100?: number
+    proteinPer100?: number
+    carbsPer100?: number
+    fatPer100?: number
+    typicalServing?: number
+    unit?: string
+  }
+
+  const kcal = Number(parsed.kcalPer100)
+  if (!parsed.name || !Number.isFinite(kcal) || kcal < 0) {
+    throw new GeminiError('parse', `Couldn't get nutrition for "${query}". Try a more specific name.`)
+  }
+
+  return {
+    name: String(parsed.name),
+    kcal: Math.round(kcal),
+    p: Math.round((Number(parsed.proteinPer100) || 0) * 10) / 10,
+    c: Math.round((Number(parsed.carbsPer100) || 0) * 10) / 10,
+    f: Math.round((Number(parsed.fatPer100) || 0) * 10) / 10,
+    serving: Math.round(Number(parsed.typicalServing) || 100),
+    unit: parsed.unit === 'ml' ? 'ml' : undefined,
   }
 }
