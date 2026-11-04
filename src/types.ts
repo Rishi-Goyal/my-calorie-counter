@@ -43,6 +43,16 @@ export interface Meal {
   source: MealSource
   thumbnail?: string // small jpeg data URL
   description?: string
+  photoId?: number // original upload in the photos table, while it is still kept (48 h)
+}
+
+/** An uploaded meal photo, kept for 48 h so it can be saved to the device later. */
+export interface StoredPhoto {
+  id?: number
+  createdAt: number // epoch ms; the photo is deleted PHOTO_TTL_MS after this
+  blob: Blob // the original file as uploaded
+  type: string // MIME type, e.g. image/jpeg
+  thumbnail: string // small jpeg data URL for lists
 }
 
 export type Sex = 'male' | 'female'
@@ -90,5 +100,6 @@ export interface DraftMeal {
   description?: string
   kcalMin?: number
   kcalMax?: number
+  photoId?: number
   editId?: number // present = editing this existing meal instead of logging a new one
 }

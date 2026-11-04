@@ -441,3 +441,18 @@ label.field > span { display: block; margin-bottom: 6px; }
 }
 .capture-opt.selected { border-color: var(--accent); background: var(--accent-soft); }
 .exercise-chip { color: var(--accent); font-size: 12px; font-weight: 600; }
+
+/* ---- Recent photos (Settings) ---- */
+.photo-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.photo-row img {
+  width: 48px; height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.photo-row .info { flex: 1; min-width: 0; }
+.photo-row .when { font-weight: 600; font-size: 14px; }
