@@ -1,5 +1,8 @@
 import { useMemo, useRef, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import type { DraftMeal, MealItem } from '../types'
+import { db } from '../lib/db'
+import { photoTimeLeft, savePhotoToDevice } from '../lib/photos'
 import { totals, searchFoods, foodToItem } from '../lib/nutrition'
 import AiFoodLookup from './AiFoodLookup'
 
@@ -94,6 +97,8 @@ export default function ConfirmMeal({ draft, onSave, onCancel }: Props) {
   }
 
   const editing = draft.editId !== undefined
+  // The original upload, while it is still kept on the device (48 h)
+  const photo = useLiveQuery(() => (draft.photoId ? db.photos.get(draft.photoId) : undefined), [draft.photoId])
 
   return (
     <div>
@@ -105,7 +110,14 @@ export default function ConfirmMeal({ draft, onSave, onCancel }: Props) {
             alt="meal"
             style={{ width: 64, height: 64, borderRadius: 12, objectFit: 'cover' }}
           />
-          {draft.description && <p className="hint">{draft.description}</p>}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {draft.description && <p className="hint">{draft.description}</p>}
+            {photo && (
+              <button type="button" className="linkish" onClick={() => savePhotoToDevice(photo)}>
+                ⬇ Save photo <span className="hint">· {photoTimeLeft(photo)}</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
       <p className="hint" style={{ marginBottom: 12 }}>

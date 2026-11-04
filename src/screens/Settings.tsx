@@ -3,6 +3,7 @@ import { getSettings, saveSettings } from '../lib/db'
 import type { ActivityLevel, Profile, Sex } from '../types'
 import { ACTIVITY_LEVEL_LABELS, computeGoals } from '../lib/goals'
 import { GoalsExplanation, applyAutoGoals } from '../components/GoalsWizard'
+import RecentPhotos from '../components/RecentPhotos'
 
 const EMPTY_PROFILE: Profile = {
   sex: 'male',
@@ -201,6 +202,10 @@ export default function SettingsScreen({ onOpenWizard }: { onOpenWizard: () => v
       <button type="button" className="btn" onClick={save}>
         {saved ? 'Saved ✓' : 'Save settings'}
       </button>
+
+      <div style={{ marginTop: 16 }}>
+        <RecentPhotos />
+      </div>
 
       <p className="hint" style={{ marginTop: 16 }}>
         Workouts finished in the Simple Workout app on this phone are picked up automatically and credited to that

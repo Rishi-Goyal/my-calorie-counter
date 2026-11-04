@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DraftMeal, MealItem } from '../types'
 import { db, getSettings, todayStr } from '../lib/db'
 import { processPhoto } from '../lib/image'
+import { storePhoto } from '../lib/photos'
 import { analyzePhoto, GeminiError } from '../lib/gemini'
 import { lookupBarcode } from '../lib/openfoodfacts'
 import { startBarcodeScanner, type ScannerHandle } from '../lib/barcode'
@@ -29,6 +30,8 @@ export default function CaptureFlow({ onClose, initial }: { onClose: () => void;
     try {
       const { base64, thumbnail } = await processPhoto(file)
       setStage({ kind: 'analyzing', thumbnail })
+      // Keep the original for 48 h so it can be saved to the device later, even if the meal is discarded
+      const photoId = await storePhoto(file, thumbnail).catch(() => undefined)
       const settings = await getSettings()
       const result = await analyzePhoto(base64, settings.geminiKey ?? '', settings.model || 'gemini-2.5-flash')
       if (result.items.length === 0) {
@@ -42,6 +45,7 @@ export default function CaptureFlow({ onClose, initial }: { onClose: () => void;
           items: result.items,
           source: 'photo',
           thumbnail,
+          photoId,
           description: result.description,
           kcalMin: result.kcalMin || undefined,
           kcalMax: result.kcalMax || undefined,
@@ -107,6 +111,7 @@ export default function CaptureFlow({ onClose, initial }: { onClose: () => void;
         kcalMax,
         source: draft.source,
         thumbnail: draft.thumbnail,
+        photoId: draft.photoId,
         description,
       })
     }

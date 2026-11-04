@@ -37,6 +37,7 @@ The app must be served over HTTPS for the camera and install prompt to work:
 
 - React + TypeScript + Vite, `vite-plugin-pwa` (offline shell, installable)
 - Dexie (IndexedDB) — meals, thumbnails, and settings never leave the device
+- Uploaded photos are kept on the device for 48 hours (**Settings → Recent photos**, or **Save photo** on the meal) so you can save the original to your camera roll, then deleted automatically
 - Gemini Flash free tier for photo analysis (bring your own key)
 - Open Food Facts API for barcodes, ZXing for scanning (lazy-loaded)
 

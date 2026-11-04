@@ -7,6 +7,7 @@ import CaptureFlow from './components/CaptureFlow'
 import GoalsWizard from './components/GoalsWizard'
 import { getSettings } from './lib/db'
 import { importBridgeWorkouts } from './lib/bridge'
+import { purgeExpiredPhotos } from './lib/photos'
 import type { DraftMeal, Meal } from './types'
 
 type Tab = 'today' | 'history' | 'settings'
@@ -25,6 +26,7 @@ function mealToDraft(meal: Meal, mode: 'edit' | 'copy'): DraftMeal {
     description: meal.description,
     kcalMin: meal.kcalMin,
     kcalMax: meal.kcalMax,
+    photoId: meal.photoId,
     editId: mode === 'edit' ? meal.id : undefined,
   }
 }
@@ -44,6 +46,8 @@ export default function App() {
     const sync = async () => {
       const s = await getSettings()
       await importBridgeWorkouts(s.profile?.weightKg ?? 70)
+      // Uploaded photos are only kept for 48 h
+      await purgeExpiredPhotos()
     }
     sync()
     const onVisible = () => document.visibilityState === 'visible' && sync()
